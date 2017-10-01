@@ -1,0 +1,276 @@
+Jenkins Developed in java
+
+--------------Section 1----------------------------
+
+we can contiuos integration and continuos delivery by jenkins and for automation
+
+process
+
+Developer ---------> Build ---------------->TEST------->unit&integration& regression &uat ->release -by configuraiton management tools 
+
+ALternative to jenkins
+
+  self hosted
+    Drone ci,teamcity
+
+  hosted as service
+   aws cli,circle ci,code ship,werker,semaphore ci
+
+---------------------------------------------------------
+
+Jenkins installation
+___________________
+
+run bash file for jenkins_install.sh
+
+Node js
+___________________
+
+it is on open source ,cross platform ,vary fast in request handling due to asynchrous i/o
+
+node js used , paypal,linked in ,uber,medium,newyork times
+
+
+node js configuration on jenkins
+______________________
+
+FOr add nodejs plugin to jenkins
+
+then 
+
+1)choose job and select free style project
+
+2)It shows project configuration settings and add git repo
+3) add build step as execute shell and type as "npm install"
+4) go to manage jenkins ->global tool configuration and add node js
+5)then build now and git source available in jenkins workspace
+
+
+then we need to install docker plugins in jenkins
+1) add cloudbees docker plugin add to jenkins
+
+2) jenkins client docker to be added and these are the steps below
+   git clone https://github.com/wardviaene/jenkins-docker.git (for jenkins docker slave)
+
+3) build docker 
+    docker build -t jenkins-docker .
+
+remove the old jenkins docker container (dockerstop jenkins, docker rm jenkins)
+
+4)
+docker run -p 8080:8080 -p 5000:5000 -v /var/jenkins_home:/var/jenkins_home -v /var/run/docker.sock:/var/run/docker.sock --name jenkins -d jenkins-docker-slave(docker build image name)
+
+we have volume mapping docker.sock, so we can execute docker commands inside the docker container too
+
+
+-----------------------section 3 ----------------------------------------------------
+DOcker hub push for nodejs source
+...........................................................................
+
+1) select build step as docker
+
+ and enter repository namd of docker hub
+ add docker registry credentials
+
+and save
+
+its push the image into repository
+
+docker run -d -p 3000:3000 --name mynodejsapp rajuas400/nodejsapp (image name)
+
+
+
+---------------------------------------------------------------------------------------------------------------
+Infrastructure as a code and automation
+--------------------------------------------------------------------------------------------------------------
+
+
+Two major tools used
+ 1) jenkins job DSL (write a code and modify jenkins automatically)
+   dsl stands for domain specify language)
+     
+ 2) jenkins pipelines (bundle and build paramters with the project)
+
+
+  jenkins job DSL
+   -----------------------------------------
+
+ sample npm install code below
+........................................
+
+job('NodeJS example') {
+    scm {
+        git('git://github.com/wardviaene/docker-demo.git') {  node -> // is hudson.plugins.git.GitSCM
+            node / gitConfigName('DSL User')
+            node / gitConfigEmail('jenkins-dsl@newtech.academy')
+        }
+    }
+    triggers {
+        scm('H/5 * * * *')
+    }
+    wrappers {
+        nodejs('nodejs') // this is the name of the NodeJS installation in 
+                         // Manage Jenkins -> Configure Tools -> NodeJS Installations -> Name
+    }
+    steps {
+        shell("npm install")
+
+    }
+}
+
+
+steps to add job dsl
+------------------------------
+1) add job dsl plugin in jenkins
+2) then add create a project for job dsl and configure with git url and  add build step as process job dsl 
+and add path to the job dsl groovy script
+  fore eg.script is in  jobdsl/node.groovy, we need to specify the path
+ 3) make an build and build failure, we need to approve scripts in main jenkins
+4) build it again
+
+to start it again 
+
+check into jenkins container workspace
+
+export PATH=$PATH:/var/jenkins_home/tools/jenkins.plugins.nodejs.tools.NodeJSInstallation/nodejs/bin
+
+then npm start
+
+
+Add another groovy script for job dsl using docker dockerBuildAndPublish api
+refer(https://jenkinsci.github.io/job-dsl-plugin/#method/javaposse.jobdsl.dsl.helpers.step.MultiJobStepContext.dockerBuildAndPublish)
+
+and docker hub credentials docker and publish
+and build now
+
+
+-----------------------------------------------------------------------------------------------------------------------
+
+JENKINS PIPELINES
+
+-------------------------------------------------------------------------------------------------------------------------
+
+
+jenkins pipelins vs job dsl
+
+we now created only free style projects using job dsl
+
+use job dsl we can create new jenkins pipeline jobs
+
+jenkins pipeline to detect project repositories using organization folder
+
+groovy is an scripting language like java , it runs on jvm
+---------------------------------------------------------
+JENKINS PIPELINE EXAMPLE with java-maven
+--------------------------------------------------------------
+
+Explanation of groowy
+
+Node:specify the node which jenkins worker node added
+
+def: to allow to declare variables
+
+stage: define building a stage: build,test,deploy
+
+-------------------------------------
+jenkins pipeline with nodejs and docker
+---------------------------------------------
+
+ script founded in docker_demo/misc/jenkinsfile
+ -------------------code --------------------------
+ node {
+   def commit_id
+   stage('Preparation') {
+     checkout scm
+     sh "git rev-parse --short HEAD > .git/commit-id"                        
+     commit_id = readFile('.git/commit-id').trim()
+   }
+   stage('test') {
+     nodejs(nodeJSInstallationName: 'nodejs') {
+       sh 'npm install --only=dev'
+       sh 'npm test'
+     }
+   }
+   stage('docker build/push') {
+     docker.withRegistry('https://index.docker.io/v1/', 'dockerhub') {
+       def app = docker.build("wardviaene/docker-nodejs-demo:${commit_id}", '.').push()
+     }
+   }
+}
+
+--------------------code -ends-----------------------------------------------------
+
+declare commit_id
+checkout scm is going to pull gir repo in jenkins
+
+git-rev -parse is going to generarate commit id and commit id going to  store
+
+stage -test install npm install
+it is going to install npm install with devdependicies in package.json
+
+npm test going to execute test.js in folder test
+
+stage('docker build/push')
+
+
+---------create pipeline--------------------------------
+
+1) stare new job item with pipelinw
+2) select pipeline with scm and in scm option select git and enter repo details
+3) script path e"enter the path of fle from above git repo"
+
+build now and the image is pushed into repo in dockerhub
+
+
+---------------------------------------------------------------------
+Email Integrations
+---------------------------------------------------------------------
+
+GOto manage plugins and add email extension plugin
+
+then goto configure system
+
+config with smtp server  use website "mailtrap.io"
+
+
+-------------------------------------------------------------------
+Slack integrations
+---------------------------------------------------------------------
+
+Manage plugin and install slack notification plugin
+
+-- go to slack and integrate web hooks app for slack
+
+need to view video for slack demo again
+
+
+
+--------------------------------------------------------------
+GIthub and bitbucket integration
+--------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
